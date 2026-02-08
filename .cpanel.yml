@@ -1,0 +1,7 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/lyvibvjb/app.neunoi.it
+    - /bin/cp -R server/* $DEPLOYPATH
+    - /bin/cp server/.env $DEPLOYPATH
+    - /bin/cp server/package.json $DEPLOYPATH
