@@ -34,6 +34,7 @@ export default function CalendarioSaleHost() {
     ora_fine: '',
     tipo_utilizzo: 'call',
     utente_esterno: false,
+    utente_id: '', // Composite ID (string)
     utente_email: '',
     nome_esterno: '',
     note: ''
@@ -131,7 +132,7 @@ export default function CalendarioSaleHost() {
         return;
       }
 
-      const utente = utenti.find(u => u.email === formNuova.utente_email);
+      const utente = utenti.find(u => u.id === formNuova.utente_id);
       if (!utente) return;
 
       const dataInizio = new Date(`${formNuova.data}T${formNuova.ora_inizio}`);
@@ -161,21 +162,74 @@ export default function CalendarioSaleHost() {
       });
     };
     checkStatus();
-  }, [formNuova.utente_email, formNuova.data, formNuova.ora_inizio, formNuova.ora_fine, formNuova.tipo_utilizzo, formNuova.utente_esterno, utenti]);
+  }, [formNuova.utente_id, formNuova.data, formNuova.ora_inizio, formNuova.ora_fine, formNuova.tipo_utilizzo, formNuova.utente_esterno, utenti]);
 
   const modificaMutation = useMutation({
     mutationFn: async ({ id, data }) => {
+      const pren = prenotazioni.find(p => p.id === id);
+      if (!pren) throw new Error('Prenotazione non trovata');
+
       const dataInizio = new Date(`${data.data}T${data.ora_inizio}`);
       const dataFine = new Date(`${data.data}T${data.ora_fine}`);
       const sala = sale.find(s => String(s.id) === String(data.sala_id));
-
       if (!sala) throw new Error('Sala non trovata');
+
+      const durataOre = (dataFine - dataInizio) / (1000 * 60 * 60);
+      const nuoveOreCredito = pren.tipo_utilizzo === 'call' ? durataOre * 0.5 : durataOre; // Actually we might want to allow changing type too
+      // But the formEdit doesn't have tipo_utilizzo? Let's check.
+      // Line 28 shows: { sala_id: '', data: '', ora_inizio: '', ora_fine: '' }
+      // So we keep the old tipo_utilizzo.
+      const vecchieOreCredito = pren.ore_credito_consumate || 0;
+      const deltaCredito = nuoveOreCredito - vecchieOreCredito;
+
+      if (deltaCredito !== 0 && pren.user_id) {
+        // Fetch abbonamenti specifically for this user
+        const abbonamentiUtente = await neunoi.entities.AbbonamentoUtente.filter({
+          user_id: pren.user_id,
+          stato: 'attivo'
+        });
+
+        if (deltaCredito > 0) {
+          let daScalare = deltaCredito;
+          const oggi = new Date();
+          oggi.setHours(0, 0, 0, 0);
+
+          for (const abb of abbonamentiUtente) {
+            if (daScalare <= 0) break;
+            const scadenza = new Date(abb.data_scadenza);
+            if (scadenza < oggi) continue;
+
+            const disp = (abb.ore_sale_totali || 0) - (abb.ore_sale_usate || 0);
+            if (disp > 0) {
+              const amount = Math.min(daScalare, disp);
+              await neunoi.entities.AbbonamentoUtente.update(abb.id, {
+                ore_sale_usate: (abb.ore_sale_usate || 0) + amount
+              });
+              daScalare -= amount;
+            }
+          }
+        } else {
+          let daRimborsare = Math.abs(deltaCredito);
+          for (const abb of [...abbonamentiUtente].reverse()) {
+            if (daRimborsare <= 0) break;
+            const usate = abb.ore_sale_usate || 0;
+            if (usate > 0) {
+              const amount = Math.min(daRimborsare, usate);
+              await neunoi.entities.AbbonamentoUtente.update(abb.id, {
+                ore_sale_usate: usate - amount
+              });
+              daRimborsare -= amount;
+            }
+          }
+        }
+      }
 
       await neunoi.entities.PrenotazioneSala.update(id, {
         sala_id: Number(data.sala_id),
         sala_nome: sala.nome,
         data_inizio: dataInizio.toISOString(),
-        data_fine: dataFine.toISOString()
+        data_fine: dataFine.toISOString(),
+        ore_credito_consumate: nuoveOreCredito
       });
     },
     onSuccess: () => {
@@ -245,40 +299,45 @@ export default function CalendarioSaleHost() {
         utenteId = null;
         utenteNome = data.nome_esterno;
       } else {
-        const utente = utenti.find(u => u.email === data.utente_email);
+        const utente = utenti.find(u => u.id === data.utente_id);
         if (!utente) {
           throw new Error('Utente non trovato nella lista. Riprova a selezionarlo.');
         }
-        utenteId = utente.id;
+        utenteId = utente.user_id; // Use real user_id if present
         utenteNome = utente.full_name;
 
-        const abbonamentiTutti = await neunoi.entities.AbbonamentoUtente.list();
-        const abbonamentiUtente = abbonamentiTutti.filter(abb =>
-          abb.stato === 'attivo' && (
-            (utente.user_id && Number(abb.user_id) === Number(utente.user_id)) ||
-            (utente.profilo_coworker_id && Number(abb.profilo_coworker_id) === Number(utente.profilo_coworker_id))
-          )
-        );
+        // Fetch abbonamenti specifically for this user/profile
+        const filters = {};
+        if (utente.user_id) filters.user_id = utente.user_id;
+        if (utente.profilo_coworker_id) filters.profilo_coworker_id = utente.profilo_coworker_id;
 
-        const creditiDisponibili = abbonamentiUtente.reduce((sum, abb) => {
+        const myAbbonamenti = await neunoi.entities.AbbonamentoUtente.filter(filters);
+        const abbonamentiAttivi = myAbbonamenti.filter(abb => {
+          if (!abb.attivo || abb.stato !== 'attivo') return false;
           const oggi = new Date();
+          oggi.setHours(0, 0, 0, 0);
+          const inizio = new Date(abb.data_inizio);
           const scadenza = new Date(abb.data_scadenza);
-          if (scadenza < oggi) return sum;
+          inizio.setHours(0, 0, 0, 0);
+          scadenza.setHours(23, 59, 59, 999);
+          return inizio <= oggi && scadenza >= oggi;
+        });
+
+        const creditiDisponibili = abbonamentiAttivi.reduce((sum, abb) => {
           return sum + ((abb.ore_sale_totali || 0) - (abb.ore_sale_usate || 0));
         }, 0);
 
-        if (oreCredito <= creditiDisponibili + 2) {
-          let creditiDaScalare = oreCredito;
-          for (const abbonamento of abbonamentiUtente) {
-            if (creditiDaScalare <= 0) break;
-            const creditiAbb = (abbonamento.ore_sale_totali || 0) - (abbonamento.ore_sale_usate || 0);
-            if (creditiAbb > 0) {
-              const daScalare = Math.min(creditiDaScalare, creditiAbb);
-              await neunoi.entities.AbbonamentoUtente.update(abbonamento.id, {
-                ore_sale_usate: (abbonamento.ore_sale_usate || 0) + daScalare
-              });
-              creditiDaScalare -= daScalare;
-            }
+        // Deduct credits if available
+        let creditiDaScalare = oreCredito;
+        for (const abbonamento of abbonamentiAttivi) {
+          if (creditiDaScalare <= 0) break;
+          const creditiAbb = (abbonamento.ore_sale_totali || 0) - (abbonamento.ore_sale_usate || 0);
+          if (creditiAbb > 0) {
+            const daScalare = Math.min(creditiDaScalare, creditiAbb);
+            await neunoi.entities.AbbonamentoUtente.update(abbonamento.id, {
+              ore_sale_usate: (abbonamento.ore_sale_usate || 0) + daScalare
+            });
+            creditiDaScalare -= daScalare;
           }
         }
       }
@@ -316,6 +375,7 @@ export default function CalendarioSaleHost() {
       ora_fine: '',
       tipo_utilizzo: 'call',
       utente_esterno: false,
+      utente_id: '',
       utente_email: '',
       nome_esterno: '',
       note: ''
@@ -477,8 +537,8 @@ export default function CalendarioSaleHost() {
                             className="w-full justify-between bg-white h-10"
                           >
                             <span className="truncate">
-                              {formNuova.utente_email
-                                ? utenti.find((u) => u.email === formNuova.utente_email)?.full_name
+                              {formNuova.utente_id
+                                ? utenti.find((u) => u.id === formNuova.utente_id)?.full_name
                                 : "Seleziona un utente..."}
                             </span>
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -495,14 +555,14 @@ export default function CalendarioSaleHost() {
                                     key={u.id}
                                     value={u.full_name + " " + (u.email || "") + " " + u.tag}
                                     onSelect={() => {
-                                      setFormNuova({ ...formNuova, utente_email: u.email });
+                                      setFormNuova({ ...formNuova, utente_id: u.id, utente_email: u.email });
                                       setOpenUserPopover(false);
                                     }}
                                   >
                                     <Check
                                       className={cn(
                                         "mr-2 h-4 w-4",
-                                        formNuova.utente_email === u.email ? "opacity-100" : "opacity-0"
+                                        formNuova.utente_id === u.id ? "opacity-100" : "opacity-0"
                                       )}
                                     />
                                     <div className="flex flex-col">
