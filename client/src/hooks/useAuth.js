@@ -4,13 +4,34 @@ import { neunoi } from '@/api/neunoiClient';
 export function useAuth() {
     const queryClient = useQueryClient();
 
+    const normalizeUserRoles = (u) => {
+        if (!u) return null;
+        let roles = u.roles;
+        if (typeof roles === 'string') {
+            try {
+                roles = JSON.parse(roles);
+            } catch (e) {
+                roles = [roles];
+            }
+        }
+        if (!Array.isArray(roles)) {
+            roles = roles ? [roles] : [];
+        }
+        // Fallback to single 'role' if roles array is empty
+        if (roles.length === 0 && u.role) {
+            roles = [u.role];
+        }
+        return { ...u, roles };
+    };
+
     const { data: user, isLoading, error, refetch } = useQuery({
         queryKey: ['auth_user'],
         queryFn: async () => {
             try {
                 const token = localStorage.getItem('auth_token');
                 if (!token) return null;
-                return await neunoi.auth.me();
+                const userData = await neunoi.auth.me();
+                return normalizeUserRoles(userData);
             } catch (err) {
                 console.error('Auth error:', err);
                 return null;

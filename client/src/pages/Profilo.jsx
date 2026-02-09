@@ -35,11 +35,19 @@ export default function Profilo() {
     const loadUser = async () => {
       try {
         const currentUser = await neunoi.auth.me();
-        setUser(currentUser);
-        setBasicFormData({
-          full_name: currentUser.full_name || '',
-          telefono: currentUser.telefono || ''
-        });
+        if (currentUser) {
+          // Robust normalization for roles
+          let r = currentUser.roles;
+          if (typeof r === 'string') { try { r = JSON.parse(r); } catch { r = [r]; } }
+          if (!Array.isArray(r)) r = r ? [r] : [currentUser.role].filter(Boolean);
+          currentUser.roles = r;
+
+          setUser(currentUser);
+          setBasicFormData({
+            full_name: currentUser.full_name || '',
+            telefono: currentUser.telefono || ''
+          });
+        }
 
         // Carica profilo socio se disponibile
         let userProfile = null;
@@ -280,11 +288,15 @@ export default function Profilo() {
             <p className="text-sm text-slate-500">I tuoi ruoli</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {user?.roles?.map((role, index) => (
+            {Array.isArray(user?.roles) ? user.roles.map((role, index) => (
               <Badge key={index} className={getRoleBadgeColor(role)}>
                 {getRoleName(role)}
               </Badge>
-            ))}
+            )) : user?.role ? (
+              <Badge className={getRoleBadgeColor(user.role)}>
+                {getRoleName(user.role)}
+              </Badge>
+            ) : null}
             {(!user?.roles || user.roles.length === 0) && user?.role && (
               <Badge className={getRoleBadgeColor(user.role)}>
                 {getRoleName(user.role)}
