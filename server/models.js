@@ -346,7 +346,14 @@ module.exports = {
         completato: { type: DataTypes.BOOLEAN, defaultValue: false },
 
         motivo_abbandono: { type: DataTypes.TEXT },
-        storico: { type: DataTypes.JSON }, // [{azione: string, utente_id: number, utente_nome: string, data: string, note: string}]
+        storico: {
+            type: DataTypes.JSON,
+            get() {
+                const val = this.getDataValue('storico');
+                if (typeof val === 'string') { try { return JSON.parse(val); } catch (e) { return []; } }
+                return val || [];
+            }
+        }, // [{azione: string, utente_id: number, utente_nome: string, data: string, note: string}]
         is_collettivo: { type: DataTypes.BOOLEAN, defaultValue: false }
     }),
 
