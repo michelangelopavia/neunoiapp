@@ -1,0 +1,14 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="20%" fill="#053c5e"/>
+  
+  <!-- Logo Layout -->
+  <g transform="translate(56, 180)">
+    <!-- White Box for 'neu' -->
+    <rect x="0" y="0" width="180" height="150" fill="white" />
+    <text x="90" y="105" text-anchor="middle" font-family="Georgia, serif" font-weight="bold" font-size="80" fill="#053c5e">neu</text>
+    
+    <!-- '[nòi]' text -->
+    <text x="200" y="105" font-family="Georgia, serif" font-weight="normal" font-size="120" fill="white">[nòi]</text>
+  </g>
+</svg>
