@@ -13,8 +13,15 @@ const authMiddleware = async (req, res, next) => {
             return res.status(401).json({ error: 'Invalid token format' });
         }
 
-        const secret = process.env.JWT_SECRET || (process.env.NODE_ENV === 'development' ? 'supersecret' : null);
-        if (!secret) throw new Error('JWT_SECRET not configured');
+        let secret = process.env.JWT_SECRET;
+
+        if (!secret) {
+            if (process.env.NODE_ENV === 'production') {
+                throw new Error('JWT_SECRET is missing in production environment!');
+            }
+            console.warn('[AUTH-WARNING] Using fallback secret for DEVELOPMENT only.');
+            secret = 'dev-secret-only';
+        }
 
         const decoded = jwt.verify(token, secret);
         const user = await User.findByPk(decoded.userId);

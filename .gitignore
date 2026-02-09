@@ -43,8 +43,9 @@ server/sync_*.js
 # Ignore log and dump files
 *.txt
 *.sqlite
-!server/database.sqlite
+server/database.sqlite
 server/database_backup_*.sqlite
+*.sql
 server/*_output.txt
 
 node_modules

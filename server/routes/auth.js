@@ -8,6 +8,18 @@ const { User, ProfiloCoworker } = require('../models');
 const authMiddleware = require('../middleware/auth');
 const { logAudit } = require('../utils/audit');
 
+const getJwtSecret = () => {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+        if (process.env.NODE_ENV === 'production') {
+            throw new Error('JWT_SECRET is critical and missing in production!');
+        }
+        console.warn('[AUTH-WARNING] using dev-secret-only');
+        return 'dev-secret-only';
+    }
+    return secret;
+};
+
 // POST /auth/login
 router.post('/login', async (req, res) => {
     try {
@@ -69,7 +81,7 @@ router.post('/login', async (req, res) => {
 
         console.log(`[LOGIN] Accesso autorizzato per: ${email}`);
 
-        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'supersecret', { expiresIn: '7d' });
+        const token = jwt.sign({ userId: user.id }, getJwtSecret(), { expiresIn: '7d' });
 
         await logAudit({
             req,
@@ -389,7 +401,7 @@ router.post('/forgot-password', async (req, res) => {
         // Genera token di reset (valido 1 ora)
         const resetToken = jwt.sign(
             { userId: user.id, purpose: 'password_reset' },
-            process.env.JWT_SECRET || 'supersecret',
+            getJwtSecret(),
             { expiresIn: '1h' }
         );
 
@@ -434,7 +446,7 @@ router.post('/reset-password', async (req, res) => {
             return res.status(400).json({ error: 'La nuova password deve contenere almeno 8 caratteri, tra cui almeno una lettera e un numero.' });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecret');
+        const decoded = jwt.verify(token, getJwtSecret());
         if (decoded.purpose !== 'password_reset') throw new Error('Token non valido per il reset');
 
         const user = await User.findByPk(decoded.userId);
@@ -468,7 +480,7 @@ router.post('/admin-trigger-reset', authMiddleware, async (req, res) => {
         // Genera token di reset (valido 1 ora)
         const resetToken = jwt.sign(
             { userId: user.id, purpose: 'password_reset' },
-            process.env.JWT_SECRET || 'supersecret',
+            getJwtSecret(),
             { expiresIn: '1h' }
         );
 
