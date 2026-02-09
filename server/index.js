@@ -453,8 +453,11 @@ if (process.env.NODE_ENV === 'production') {
 
 // Error handling
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ error: 'Something went wrong!' });
+    console.error('[GLOBAL-ERROR]', err);
+    res.status(500).json({
+        error: err.message || 'Something went wrong!',
+        details: process.env.NODE_ENV !== 'production' ? err.stack : undefined
+    });
 });
 
 // Start Server
