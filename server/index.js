@@ -220,13 +220,10 @@ app.get('/api/backup-database-neunoi', authMiddleware, adminOnly, async (req, re
         }
     } else if (dialect === 'mysql') {
         try {
-            res.setHeader('Content-Type', 'application/sql');
-            res.setHeader('Content-Disposition', `attachment; filename="backup_neunoi_mysql_${timestamp}.sql"`);
+            console.log('[BACKUP] Starting dump generation...');
+            let dump = `-- NEU NOI MySQL Backup\n-- Generated: ${new Date().toISOString()}\n\n`;
+            dump += 'SET FOREIGN_KEY_CHECKS = 0;\n\n';
 
-            res.write(`-- NEU NOI MySQL Backup\n-- Generated: ${new Date().toISOString()}\n\n`);
-            res.write('SET FOREIGN_KEY_CHECKS = 0;\n\n');
-
-            // Explicit list of models for MySQL Dump
             const modelNames = [
                 'User', 'ProfiloSocio', 'ProfiloCoworker', 'DatiFatturazione',
                 'TipoAbbonamento', 'AbbonamentoUtente', 'SalaRiunioni', 'PrenotazioneSala',
@@ -238,18 +235,13 @@ app.get('/api/backup-database-neunoi', authMiddleware, adminOnly, async (req, re
 
             for (const name of modelNames) {
                 const Model = models[name];
-                if (!Model) {
-                    console.log(`[BACKUP] Skipping missing model: ${name}`);
-                    continue;
-                }
+                if (!Model) continue;
 
                 const tableName = Model.tableName;
-                console.log(`[BACKUP] Dumping ${tableName}...`);
                 const data = await Model.findAll({ raw: true });
-                console.log(`[BACKUP] Found ${data.length} rows for ${tableName}`);
 
-                res.write(`-- Table: ${tableName} --\n`);
-                res.write(`TRUNCATE TABLE \`${tableName}\`;\n`);
+                dump += `-- Table: ${tableName} --\n`;
+                dump += `TRUNCATE TABLE \`${tableName}\`;\n`;
 
                 if (data.length > 0) {
                     for (const row of data) {
@@ -268,20 +260,21 @@ app.get('/api/backup-database-neunoi', authMiddleware, adminOnly, async (req, re
                             }
                             return v;
                         }).join(', ');
-                        res.write(`INSERT INTO \`${tableName}\` (${columns}) VALUES (${values});\n`);
+                        dump += `INSERT INTO \`${tableName}\` (${columns}) VALUES (${values});\n`;
                     }
                 }
-                res.write(`-- Finished ${tableName} --\n\n`);
-                if (res.flush) res.flush();
-                console.log(`[BACKUP] Table ${tableName} written to stream`);
+                dump += `\n`;
             }
 
-            res.write('SET FOREIGN_KEY_CHECKS = 1;\n');
-            res.end();
-            console.log('[BACKUP] Completed successfully');
+            dump += 'SET FOREIGN_KEY_CHECKS = 1;\n';
+
+            res.setHeader('Content-Type', 'application/sql');
+            res.setHeader('Content-Disposition', `attachment; filename="backup_neunoi_mysql_${timestamp}.sql"`);
+            res.send(dump);
+            console.log('[BACKUP] Completed and sent successfully');
         } catch (error) {
             console.error('[BACKUP-ERROR]', error);
-            if (!res.headersSent) res.status(500).send('Errore generazione backup MySQL');
+            res.status(500).json({ error: 'Errore durante la generazione del backup', details: error.message });
         }
     } else {
         res.status(500).send('Dialect non supportato per il backup automatico');
