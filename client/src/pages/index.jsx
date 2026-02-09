@@ -37,7 +37,7 @@ import VerifyEmail from "./VerifyEmail";
 import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
-function ProtectedRoute({ children }) {
+function ProtectedRoute({ children, allowedRoles }) {
     const { user, isLoading } = useAuth();
     const location = useLocation();
 
@@ -47,6 +47,16 @@ function ProtectedRoute({ children }) {
 
     if (!user) {
         return <Navigate to="/Login" state={{ from: location }} replace />;
+    }
+
+    if (allowedRoles && allowedRoles.length > 0) {
+        // Normalize roles for comparison
+        const userRoles = Array.isArray(user.roles) ? user.roles : (typeof user.roles === 'string' ? [user.roles] : []);
+        const hasPermission = allowedRoles.some(role => userRoles.includes(role) || user.role === role);
+
+        if (!hasPermission) {
+            return <Navigate to="/Home" replace />;
+        }
     }
 
     return children;
@@ -143,18 +153,18 @@ function PagesContent() {
                 } />
 
                 {/* Protected Pages */}
-                <Route path="/Amministrazione" element={<ProtectedRoute><Amministrazione /></ProtectedRoute>} />
-                <Route path="/Coworking" element={<ProtectedRoute><Coworking /></ProtectedRoute>} />
-                <Route path="/GestioneCoworking" element={<ProtectedRoute><GestioneCoworking /></ProtectedRoute>} />
-                <Route path="/Host" element={<ProtectedRoute><Host /></ProtectedRoute>} />
-                <Route path="/ImportaDati" element={<ProtectedRoute><ImportaDati /></ProtectedRoute>} />
-                <Route path="/MieiNEU" element={<ProtectedRoute><MieiNEU /></ProtectedRoute>} />
-                <Route path="/MieiTask" element={<ProtectedRoute><MieiTask /></ProtectedRoute>} />
+                <Route path="/Amministrazione" element={<ProtectedRoute allowedRoles={['admin', 'super_admin']}><Amministrazione /></ProtectedRoute>} />
+                <Route path="/Coworking" element={<ProtectedRoute allowedRoles={['coworker', 'socio', 'admin', 'super_admin']}><Coworking /></ProtectedRoute>} />
+                <Route path="/GestioneCoworking" element={<ProtectedRoute allowedRoles={['admin', 'super_admin']}><GestioneCoworking /></ProtectedRoute>} />
+                <Route path="/Host" element={<ProtectedRoute allowedRoles={['host', 'admin', 'super_admin']}><Host /></ProtectedRoute>} />
+                <Route path="/ImportaDati" element={<ProtectedRoute allowedRoles={['admin', 'super_admin']}><ImportaDati /></ProtectedRoute>} />
+                <Route path="/MieiNEU" element={<ProtectedRoute allowedRoles={['socio', 'admin', 'super_admin']}><MieiNEU /></ProtectedRoute>} />
+                <Route path="/MieiTask" element={<ProtectedRoute allowedRoles={['socio', 'admin', 'super_admin']}><MieiTask /></ProtectedRoute>} />
                 <Route path="/Profilo" element={<ProtectedRoute><Profilo /></ProtectedRoute>} />
-                <Route path="/Riepiloghi" element={<ProtectedRoute><Riepiloghi /></ProtectedRoute>} />
-                <Route path="/RiepilogoSoci" element={<ProtectedRoute><RiepilogoSoci /></ProtectedRoute>} />
-                <Route path="/TurniHost" element={<ProtectedRoute><TurniHost /></ProtectedRoute>} />
-                <Route path="/Volontariato" element={<ProtectedRoute><Volontariato /></ProtectedRoute>} />
+                <Route path="/Riepiloghi" element={<ProtectedRoute allowedRoles={['socio', 'admin', 'super_admin']}><Riepiloghi /></ProtectedRoute>} />
+                <Route path="/RiepilogoSoci" element={<ProtectedRoute allowedRoles={['admin', 'super_admin']}><RiepilogoSoci /></ProtectedRoute>} />
+                <Route path="/TurniHost" element={<ProtectedRoute allowedRoles={['gestore_turni', 'admin', 'super_admin']}><TurniHost /></ProtectedRoute>} />
+                <Route path="/Volontariato" element={<ProtectedRoute allowedRoles={['socio', 'admin', 'super_admin']}><Volontariato /></ProtectedRoute>} />
 
             </Routes>
         </Layout>

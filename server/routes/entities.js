@@ -56,13 +56,13 @@ const checkPermissions = (req, res, next) => {
         const { modelName } = req.params;
         const user = req.user;
         const roles = normalizeRoles(user);
-        const isAdminOrHost = roles.some(r => ['admin', 'super_admin', 'host'].includes(r));
+        const isAdminOrHostOrGestore = roles.some(r => ['admin', 'super_admin', 'host', 'gestore_turni'].includes(r));
 
-        // 1. Modelli sensibili accessibili solo ad Admin/Host
+        // 1. Modelli sensibili accessibili solo ad Admin/Host/Gestore
         const sensitiveModels = ['User', 'TransazioneNEU', 'OrdineCoworking', 'AbbonamentoUtente', 'SistemaSetting', 'AzioneVolontariato', 'AmbitoVolontariato', 'DichiarazioneVolontariato', 'IngressoCoworking', 'PrenotazioneSala'];
 
-        // Admin/Host possono accedere a tutto liberamente
-        if (isAdminOrHost) {
+        // Privileged roles can access everything freely
+        if (isAdminOrHostOrGestore) {
             return next();
         }
 
@@ -115,7 +115,7 @@ const checkPermissions = (req, res, next) => {
         }
 
         // 2. Protezione Campi Sensibili (Mass Assignment)
-        if (['POST', 'PATCH', 'PUT'].includes(req.method) && !isAdminOrHost) {
+        if (['POST', 'PATCH', 'PUT'].includes(req.method) && !isAdminOrHostOrGestore) {
             let restrictedFields = ['role', 'roles', 'saldo_neu', 'status', 'neu_guadagnati', 'approvata', 'confermato', 'email', 'user_id', 'numero_ricevuta'];
 
             // Se l'utente sta creando una propria risorsa (es. Volontariato), 
