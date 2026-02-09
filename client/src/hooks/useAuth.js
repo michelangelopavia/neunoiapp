@@ -47,6 +47,18 @@ export function useAuth() {
         queryClient.invalidateQueries();
     };
 
+    const hasRole = (role) => {
+        if (!user) return false;
+        const roles = Array.isArray(user.roles) ? user.roles : (typeof user.roles === 'string' ? [user.roles] : []);
+        return roles.includes(role) || user.role === role;
+    };
+
+    const hasAnyRole = (requiredRoles) => {
+        if (!user) return false;
+        const roles = Array.isArray(user.roles) ? user.roles : (typeof user.roles === 'string' ? [user.roles] : []);
+        return requiredRoles.some(r => roles.includes(r) || user.role === r);
+    };
+
     return {
         user,
         isLoading,
@@ -54,7 +66,11 @@ export function useAuth() {
         logout,
         refetch,
         isAuthenticated: !!user,
-        isAdmin: user?.roles?.includes('admin') || user?.roles?.includes('super_admin') || user?.role === 'admin' || user?.role === 'super_admin',
-        isSuperAdmin: user?.roles?.includes('super_admin') || user?.role === 'super_admin'
+        hasRole,
+        hasAnyRole,
+        isAdmin: hasAnyRole(['admin', 'super_admin']),
+        isSuperAdmin: hasRole('super_admin'),
+        isHost: hasRole('host'),
+        isSocio: hasAnyRole(['socio', 'admin', 'super_admin']),
     };
 }

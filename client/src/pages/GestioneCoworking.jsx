@@ -9,16 +9,14 @@ import CalendarioSale from '../components/coworking/CalendarioSale';
 import { useAuth } from '../hooks/useAuth';
 
 export default function GestioneCoworking() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isAdmin, isHost } = useAuth();
   const loading = authLoading;
 
   if (loading) {
     return <div className="text-center py-12">Caricamento...</div>;
   }
 
-  const roles = Array.isArray(user?.roles) ? user.roles : (typeof user?.roles === 'string' ? [user.roles] : []);
-  const isAdmin = roles.some(r => ['admin', 'super_admin'].includes(r));
-  const isHost = roles.some(r => ['host', 'admin', 'super_admin'].includes(r));
+
 
   return (
     <div className="space-y-6">

@@ -12,14 +12,16 @@ const User = sequelize.define('User', {
         defaultValue: [],
         get() {
             const rawValue = this.getDataValue('roles');
+            if (!rawValue) return [];
             if (typeof rawValue === 'string') {
                 try {
-                    return JSON.parse(rawValue);
+                    const parsed = JSON.parse(rawValue);
+                    return Array.isArray(parsed) ? parsed : [parsed];
                 } catch (e) {
                     return [rawValue];
                 }
             }
-            return rawValue || [];
+            return Array.isArray(rawValue) ? rawValue : [rawValue];
         }
     },
     status: { type: DataTypes.STRING, defaultValue: 'in_attesa' }, // in_attesa, approvato, sospeso
@@ -42,10 +44,28 @@ const User = sequelize.define('User', {
     }
 });
 
-// Add toJSON to ensure it's always removed even if scope is bypassed
+// Add toJSON to ensure consistency and security
 User.prototype.toJSON = function () {
     const values = { ...this.get() };
     delete values.password_hash;
+    delete values.verification_token;
+
+    // Ensure roles is ALWAYS an array in the JSON response
+    if (typeof values.roles === 'string') {
+        try {
+            values.roles = JSON.parse(values.roles);
+        } catch (e) {
+            values.roles = [values.roles];
+        }
+    }
+    if (!Array.isArray(values.roles)) {
+        values.roles = values.roles ? [values.roles] : [];
+    }
+    // Fallback if empty
+    if (values.roles.length === 0 && values.role) {
+        values.roles = [values.role];
+    }
+
     return values;
 };
 
@@ -350,8 +370,16 @@ module.exports = {
             type: DataTypes.JSON,
             get() {
                 const val = this.getDataValue('storico');
-                if (typeof val === 'string') { try { return JSON.parse(val); } catch (e) { return []; } }
-                return val || [];
+                if (!val) return [];
+                if (typeof val === 'string') {
+                    try {
+                        const parsed = JSON.parse(val);
+                        return Array.isArray(parsed) ? parsed : [parsed];
+                    } catch (e) {
+                        return [];
+                    }
+                }
+                return Array.isArray(val) ? val : [val];
             }
         }, // [{azione: string, utente_id: number, utente_nome: string, data: string, note: string}]
         is_collettivo: { type: DataTypes.BOOLEAN, defaultValue: false }

@@ -12,7 +12,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 
 export default function Layout({ children, currentPageName }) {
-  const { user, logout, isLoading } = useAuth();
+  const { user, logout, isLoading, isAdmin, isSuperAdmin, isSocio, isHost, hasRole, hasAnyRole } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -37,18 +37,8 @@ export default function Layout({ children, currentPageName }) {
     syncProfile();
   }, [user]);
 
-  const hasRole = (role) => {
-    if (!user) return false;
-    const roles = Array.isArray(user.roles) ? user.roles : (typeof user.roles === 'string' ? [user.roles] : []);
-    return roles.includes(role) || user.role === role;
-  };
-
-  const isSocio = hasRole('socio') || hasRole('admin') || hasRole('super_admin');
-  const isAdmin = hasRole('admin') || hasRole('super_admin');
-  const isSuperAdmin = hasRole('super_admin');
   const isGestoreTurni = hasRole('gestore_turni') || isAdmin;
   const isCoworker = hasRole('coworker') || isSocio;
-  const isHost = hasRole('host');
 
 
   const handleLogout = async () => {

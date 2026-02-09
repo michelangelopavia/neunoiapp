@@ -29,7 +29,7 @@ import { generateRicevutaPDF } from '../utils/receiptGenerator';
 import CalendarioTurni from '../components/turni/CalendarioTurni';
 
 export default function Coworking() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, isAdmin, isSocio } = useAuth();
   const [prenotaExpanded, setPrenotaExpanded] = useState(false);
   const [editBookingOpen, setEditBookingOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -252,7 +252,7 @@ export default function Coworking() {
             <h1 className="text-4xl font-bold">Coworking</h1>
             <p className="text-lg opacity-90 mt-2">Gestisci il tuo abbonamento e prenota le sale</p>
           </div>
-          {(user?.roles?.includes('socio') || user?.role === 'socio') && (
+          {isSocio && (
             <Button
               className="bg-[#1f7a8c] hover:bg-[#db222a] text-white"
               onClick={() => setShowHostCalendar(true)}
@@ -439,7 +439,7 @@ export default function Coworking() {
               const s = sale.find(s => s.id === p.sala_id);
               const userRoles = Array.isArray(user?.roles) ? user.roles : [];
               if (s && (s.nome?.toLowerCase().includes('eventi') || s.solo_staff)) {
-                return userRoles.some(r => ['host', 'admin', 'super_admin'].includes(r));
+                return isAdmin;
               }
               return true;
             })} />

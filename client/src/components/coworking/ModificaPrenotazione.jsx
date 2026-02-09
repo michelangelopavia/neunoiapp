@@ -129,7 +129,8 @@ export default function ModificaPrenotazione({ open, onOpenChange, prenotazione,
             const deltaCredito = nuoveOreCredito - vecchieOreCredito;
 
             // Verifica orario
-            const isAdminOrHost = user.roles?.some(r => ['host', 'admin', 'super_admin'].includes(r));
+            const rolesArr = Array.isArray(user?.roles) ? user.roles : (typeof user?.roles === 'string' ? [user.roles] : []);
+            const isAdminOrHost = rolesArr.some(r => ['host', 'admin', 'super_admin'].includes(r));
             if (!isAdminOrHost) {
                 const giorno = dataInizio.getDay();
                 if (giorno === 0 || giorno === 6) throw new Error('Sale disponibili solo Lun-Ven');
@@ -221,7 +222,8 @@ export default function ModificaPrenotazione({ open, onOpenChange, prenotazione,
                             <SelectContent>
                                 {sale
                                     .filter(s => {
-                                        const isAdmin = user.roles?.some(r => ['host', 'admin', 'super_admin'].includes(r));
+                                        const rolesArr = Array.isArray(user?.roles) ? user.roles : (typeof user?.roles === 'string' ? [user.roles] : []);
+                                        const isAdmin = rolesArr.some(r => ['host', 'admin', 'super_admin'].includes(r));
                                         if (s.nome?.toLowerCase().includes('eventi') || s.solo_staff) {
                                             return isAdmin;
                                         }

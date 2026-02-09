@@ -32,7 +32,7 @@ import {
 import { useAuth } from '../hooks/useAuth';
 
 export default function Amministrazione() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, isAdmin, isSuperAdmin } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -399,7 +399,7 @@ export default function Amministrazione() {
               Riepilogo Soci
             </Button>
           </Link>
-          {(currentUser?.roles?.includes('super_admin') || currentUser?.role === 'super_admin') && (
+          {isSuperAdmin && (
             <Link to={createPageUrl('ImportaDati')}>
               <Button className="bg-[#db222a] hover:bg-white hover:text-[#db222a] border-2 border-[#db222a] transition-colors font-bold">
                 <Upload className="w-5 h-5 mr-2" />
