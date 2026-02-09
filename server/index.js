@@ -233,7 +233,7 @@ app.get('/api/backup-database-neunoi', authMiddleware, adminOnly, async (req, re
                 'IngressoCoworking', 'OrdineCoworking', 'AmbitoVolontariato',
                 'AzioneVolontariato', 'DichiarazioneVolontariato', 'TurnoHost',
                 'TransazioneNEU', 'NotificaAbbonamento', 'TaskNotifica',
-                'SistemaSetting', 'AuditLog'
+                'SistemaSetting'
             ];
 
             for (const name of modelNames) {
@@ -271,7 +271,8 @@ app.get('/api/backup-database-neunoi', authMiddleware, adminOnly, async (req, re
                         res.write(`INSERT INTO \`${tableName}\` (${columns}) VALUES (${values});\n`);
                     }
                 }
-                res.write('\n');
+                res.write(`-- Finished ${tableName} --\n\n`);
+                if (res.flush) res.flush();
                 console.log(`[BACKUP] Table ${tableName} written to stream`);
             }
 
