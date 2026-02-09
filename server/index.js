@@ -191,6 +191,9 @@ app.get('/api/admin/test-email-connection', authMiddleware, adminOnly, async (re
 
         res.json({
             timestamp: new Date().toISOString(),
+            db_dialect: sequelize.getDialect(),
+            db_host: process.env.DB_HOST || 'localhost',
+            db_name: process.env.DB_NAME || 'not set',
             debug_info: {
                 host: process.env.SMTP_HOST || 'using-default',
                 port: process.env.SMTP_PORT || 'using-default',
