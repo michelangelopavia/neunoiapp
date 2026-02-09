@@ -243,6 +243,7 @@ app.get('/api/backup-database-neunoi', authMiddleware, adminOnly, async (req, re
                 const tableName = Model.tableName;
                 console.log(`[BACKUP] Dumping ${tableName}...`);
                 const data = await Model.findAll({ raw: true });
+                console.log(`[BACKUP] Found ${data.length} rows for ${tableName}`);
 
                 res.write(`-- Table: ${tableName} --\n`);
                 res.write(`TRUNCATE TABLE \`${tableName}\`;\n`);
@@ -268,6 +269,7 @@ app.get('/api/backup-database-neunoi', authMiddleware, adminOnly, async (req, re
                     }
                 }
                 res.write('\n');
+                console.log(`[BACKUP] Table ${tableName} written to stream`);
             }
 
             res.write('SET FOREIGN_KEY_CHECKS = 1;\n');

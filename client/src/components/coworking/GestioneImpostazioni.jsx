@@ -154,7 +154,7 @@ export default function GestioneImpostazioni() {
                             <Button
                                 onClick={async () => {
                                     try {
-                                        toast.loading('Generazione backup in corso...');
+                                        toast.loading('Generazione backup in corso...', { duration: 0 });
                                         await neunoi.admin.downloadBackup();
                                         toast.dismiss();
                                         toast.success('Backup scaricato con successo');
@@ -168,6 +168,38 @@ export default function GestioneImpostazioni() {
                             >
                                 <Save className="w-4 h-4 mr-2" />
                                 Scarica Backup
+                            </Button>
+                        </div>
+
+                        <div className="p-4 bg-slate-50 border rounded-lg">
+                            <h3 className="font-semibold mb-2">Informazioni Sistema</h3>
+                            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                                <div className="text-slate-500 text-right">Database Attivo:</div>
+                                <div className="font-bold text-purple-700 uppercase" id="diag-dialect">Caricamento...</div>
+
+                                <div className="text-slate-500 text-right">Host Database:</div>
+                                <div id="diag-host">...</div>
+
+                                <div className="text-slate-500 text-right">Database Name:</div>
+                                <div id="diag-name">...</div>
+                            </div>
+                            <Button
+                                className="mt-4 w-full h-8 text-xs"
+                                variant="ghost"
+                                onClick={async () => {
+                                    try {
+                                        const res = await neunoi.admin.testEmailConnection();
+                                        if (res) {
+                                            document.getElementById('diag-dialect').innerText = res.db_dialect || 'N/A';
+                                            document.getElementById('diag-host').innerText = res.db_host || 'N/A';
+                                            document.getElementById('diag-name').innerText = res.db_name || 'N/A';
+                                        }
+                                    } catch (e) {
+                                        console.error('Diag failed', e);
+                                    }
+                                }}
+                            >
+                                Carica Info Sistema
                             </Button>
                         </div>
                     </div>
