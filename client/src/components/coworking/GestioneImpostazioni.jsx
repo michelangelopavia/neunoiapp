@@ -145,6 +145,31 @@ export default function GestioneImpostazioni() {
                                 Esegui Test
                             </Button>
                         </div>
+
+                        <div className="flex items-center justify-between p-4 bg-slate-50 border rounded-lg">
+                            <div>
+                                <h3 className="font-semibold">Backup Database</h3>
+                                <p className="text-sm text-slate-500">Scarica una copia completa del database attuale (SQL o SQLite).</p>
+                            </div>
+                            <Button
+                                onClick={async () => {
+                                    try {
+                                        toast.loading('Generazione backup in corso...');
+                                        await neunoi.admin.downloadBackup();
+                                        toast.dismiss();
+                                        toast.success('Backup scaricato con successo');
+                                    } catch (e) {
+                                        toast.dismiss();
+                                        toast.error('Errore download: ' + e.message);
+                                    }
+                                }}
+                                variant="outline"
+                                className="border-blue-200 hover:bg-blue-50 text-blue-800"
+                            >
+                                <Save className="w-4 h-4 mr-2" />
+                                Scarica Backup
+                            </Button>
+                        </div>
                     </div>
                 </CardContent>
             </Card>

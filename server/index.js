@@ -189,12 +189,63 @@ app.get('/api/admin/test-email-connection', authMiddleware, adminOnly, async (re
     }
 });
 
-app.get('/api/backup-database-neunoi', authMiddleware, adminOnly, (req, res) => {
-    const dbPath = process.env.DB_STORAGE || path.join(__dirname, 'database.sqlite');
-    if (fs.existsSync(dbPath)) {
-        res.download(dbPath, `backup_database_${new Date().toISOString().split('T')[0]}.sqlite`);
+app.get('/api/backup-database-neunoi', authMiddleware, adminOnly, async (req, res) => {
+    const dialect = sequelize.getDialect();
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+
+    if (dialect === 'sqlite') {
+        const dbPath = process.env.DB_STORAGE || path.join(__dirname, 'database.sqlite');
+        if (fs.existsSync(dbPath)) {
+            res.download(dbPath, `backup_neunoi_sqlite_${timestamp}.sqlite`);
+        } else {
+            res.status(404).send('File database non trovato sul server');
+        }
+    } else if (dialect === 'mysql') {
+        try {
+            res.setHeader('Content-Type', 'application/sql');
+            res.setHeader('Content-Disposition', `attachment; filename="backup_neunoi_mysql_${timestamp}.sql"`);
+
+            res.write(`-- NEU NOI MySQL Backup\n-- Generated: ${new Date().toISOString()}\n\n`);
+            res.write('SET FOREIGN_KEY_CHECKS = 0;\n\n');
+
+            // Order matters for foreign keys if we were importing strictly, but we disable checks above
+            const modelNames = Object.keys(models).filter(key => key !== 'sequelize' && key !== 'Sequelize');
+
+            for (const name of modelNames) {
+                const Model = models[name];
+                if (!Model) continue;
+
+                const tableName = Model.tableName;
+                const data = await Model.findAll({ raw: true }); // optimize: use streams if huge, but findAll ok for now
+
+                res.write(`-- Table: ${tableName} --\n`);
+                res.write(`TRUNCATE TABLE \`${tableName}\`;\n`);
+
+                if (data.length > 0) {
+                    for (const row of data) {
+                        const columns = Object.keys(row).map(c => '`' + c + '`').join(', ');
+                        const values = Object.values(row).map(v => {
+                            if (v === null) return 'NULL';
+                            if (typeof v === 'string') return "'" + v.replace(/\\/g, "\\\\").replace(/'/g, "''").replace(/\n/g, "\\n").replace(/\r/g, "\\r") + "'";
+                            if (typeof v === 'boolean') return v ? 1 : 0;
+                            if (v instanceof Date) return "'" + v.toISOString().slice(0, 19).replace('T', ' ') + "'";
+                            if (typeof v === 'object') return "'" + JSON.stringify(v).replace(/'/g, "''") + "'";
+                            return v;
+                        }).join(', ');
+                        res.write(`INSERT INTO \`${tableName}\` (${columns}) VALUES (${values});\n`);
+                    }
+                }
+                res.write('\n');
+            }
+
+            res.write('SET FOREIGN_KEY_CHECKS = 1;\n');
+            res.end();
+        } catch (error) {
+            console.error('[BACKUP-ERROR]', error);
+            if (!res.headersSent) res.status(500).send('Errore generazione backup MySQL');
+        }
     } else {
-        res.status(404).send('File database non trovato sul server');
+        res.status(500).send('Dialect non supportato per il backup automatico');
     }
 });
 

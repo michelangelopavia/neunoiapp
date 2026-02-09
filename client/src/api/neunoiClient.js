@@ -165,6 +165,30 @@ export const neunoi = {
                 headers: getHeaders()
             }, 40000);
             return handleResponse(res);
+        },
+        downloadBackup: async () => {
+            const res = await fetch(`${API_URL}/api/backup-database-neunoi`, {
+                headers: getHeaders()
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || 'Backup download failed');
+            }
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const disposition = res.headers.get('Content-Disposition');
+            let filename = 'backup.db';
+            if (disposition && disposition.indexOf('filename=') !== -1) {
+                const matches = /filename="([^"]*)"/.exec(disposition);
+                if (matches != null && matches[1]) filename = matches[1];
+            }
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            return true;
         }
     },
     auth: {
