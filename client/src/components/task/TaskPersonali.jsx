@@ -145,7 +145,7 @@ export default function TaskPersonali() {
           )}
 
           {/* Historical Trace */}
-          {task.storico && task.storico.length > 0 && (
+          {Array.isArray(task.storico) && task.storico.length > 0 && (
             <div className="mt-3 space-y-1">
               <div className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
                 <History className="w-3 h-3" /> Storico Task

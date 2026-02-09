@@ -75,7 +75,8 @@ export default function MieiNEU() {
     }
   }, [authLoading, user]);
 
-  const isAssociazione = user?.roles?.includes('associazione') || user?.role === 'associazione';
+  const roles = Array.isArray(user?.roles) ? user.roles : (typeof user?.roles === 'string' ? [user.roles] : []);
+  const isAssociazione = roles.includes('associazione') || user?.role === 'associazione';
 
   const loadSoci = async () => {
     try {

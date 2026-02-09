@@ -115,7 +115,8 @@ export default function PrenotaSala({ user, abbonamenti = [] }) {
 
       // Verifica permessi per sala corsi
       if (sala.solo_staff) {
-        const hasPermission = user.roles?.some(r => ['host', 'admin', 'super_admin'].includes(r));
+        const roles = Array.isArray(user?.roles) ? user.roles : (typeof user?.roles === 'string' ? [user.roles] : []);
+        const hasPermission = roles.some(r => ['host', 'admin', 'super_admin'].includes(r));
         if (!hasPermission) {
           throw new Error('Non hai i permessi per prenotare questa sala');
         }
@@ -132,7 +133,8 @@ export default function PrenotaSala({ user, abbonamenti = [] }) {
       }
 
       // Verifica orario (9:00 - 18:30, lun-ven) - Solo per utenti standard
-      const isAdminOrHost = user.roles?.some(r => ['host', 'admin', 'super_admin'].includes(r));
+      const roles = Array.isArray(user?.roles) ? user.roles : (typeof user?.roles === 'string' ? [user.roles] : []);
+      const isAdminOrHost = roles.some(r => ['host', 'admin', 'super_admin'].includes(r));
 
       if (!isAdminOrHost) {
         const giorno = dataInizio.getDay();
@@ -265,7 +267,8 @@ export default function PrenotaSala({ user, abbonamenti = [] }) {
                 <SelectContent>
                   {sale
                     .filter(s => {
-                      const isAdmin = user.roles?.some(r => ['host', 'admin', 'super_admin'].includes(r));
+                      const roles = Array.isArray(user?.roles) ? user.roles : (typeof user?.roles === 'string' ? [user.roles] : []);
+                      const isAdmin = roles.some(r => ['host', 'admin', 'super_admin'].includes(r));
                       // Nascondi sala eventi agli utenti normali
                       if (s.nome?.toLowerCase().includes('eventi') || s.solo_staff) {
                         return isAdmin;

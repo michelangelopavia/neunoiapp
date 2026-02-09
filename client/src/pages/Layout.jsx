@@ -39,7 +39,8 @@ export default function Layout({ children, currentPageName }) {
 
   const hasRole = (role) => {
     if (!user) return false;
-    return user.roles?.includes(role) || user.role === role;
+    const roles = Array.isArray(user.roles) ? user.roles : (typeof user.roles === 'string' ? [user.roles] : []);
+    return roles.includes(role) || user.role === role;
   };
 
   const isSocio = hasRole('socio') || hasRole('admin') || hasRole('super_admin');

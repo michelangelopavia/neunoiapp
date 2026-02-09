@@ -48,10 +48,11 @@ export default function TurniHost() {
     const profiliSoci = await neunoi.entities.ProfiloSocio.list();
 
     // Filtra solo utenti con ruolo socio, admin o super_admin
-    const soci = allUsers.filter(u =>
-      u.roles?.some(r => ['socio', 'admin', 'super_admin'].includes(r)) ||
-      ['socio', 'admin', 'super_admin'].includes(u.role)
-    ).map(u => {
+    const soci = allUsers.filter(u => {
+      const roles = Array.isArray(u.roles) ? u.roles : (typeof u.roles === 'string' ? [u.roles] : []);
+      return roles.some(r => ['socio', 'admin', 'super_admin'].includes(r)) ||
+        ['socio', 'admin', 'super_admin'].includes(u.role);
+    }).map(u => {
       const profilo = profiliSoci.find(p => String(p.user_id) === String(u.id));
       return {
         ...u,
@@ -160,7 +161,8 @@ export default function TurniHost() {
       else if (ora >= 14) tipoGiorno = 'feriale_pomeriggio';
 
       // Verifica se è il profilo Associazione/Dipendente (non riceve NEU)
-      const isAssociazione = user.roles?.includes('associazione') || user.role === 'associazione';
+      const roles = Array.isArray(user.roles) ? user.roles : (typeof user.roles === 'string' ? [user.roles] : []);
+      const isAssociazione = roles.includes('associazione') || user.role === 'associazione';
 
       if (editingTurno) {
         // Modifica turno esistente
@@ -311,7 +313,8 @@ export default function TurniHost() {
     loadCurrentUser();
   }, []);
 
-  const isSuperAdmin = currentUser?.roles?.includes('super_admin') || currentUser?.role === 'super_admin';
+  const roles = Array.isArray(currentUser?.roles) ? currentUser.roles : (typeof currentUser?.roles === 'string' ? [currentUser.roles] : []);
+  const isSuperAdmin = roles.includes('super_admin') || currentUser?.role === 'super_admin';
 
   return (
     <div className="space-y-6">

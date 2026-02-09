@@ -16,8 +16,9 @@ export default function GestioneCoworking() {
     return <div className="text-center py-12">Caricamento...</div>;
   }
 
-  const isAdmin = user?.roles?.some(r => ['admin', 'super_admin'].includes(r));
-  const isHost = user?.roles?.some(r => ['host', 'admin', 'super_admin'].includes(r));
+  const roles = Array.isArray(user?.roles) ? user.roles : (typeof user?.roles === 'string' ? [user.roles] : []);
+  const isAdmin = roles.some(r => ['admin', 'super_admin'].includes(r));
+  const isHost = roles.some(r => ['host', 'admin', 'super_admin'].includes(r));
 
   return (
     <div className="space-y-6">
