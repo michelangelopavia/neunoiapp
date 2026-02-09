@@ -250,7 +250,10 @@ app.get('/api/backup-database-neunoi', authMiddleware, adminOnly, async (req, re
                             if (v === null) return 'NULL';
                             if (typeof v === 'string') return "'" + v.replace(/\\/g, "\\\\").replace(/'/g, "''").replace(/\n/g, "\\n").replace(/\r/g, "\\r") + "'";
                             if (typeof v === 'boolean') return v ? 1 : 0;
-                            if (v instanceof Date) return "'" + v.toISOString().slice(0, 19).replace('T', ' ') + "'";
+                            if (v instanceof Date) {
+                                if (isNaN(v.getTime())) return 'NULL';
+                                return "'" + v.toISOString().slice(0, 19).replace('T', ' ') + "'";
+                            }
                             if (typeof v === 'object') {
                                 try {
                                     return "'" + JSON.stringify(v).replace(/\\/g, "\\\\").replace(/'/g, "''") + "'";
