@@ -358,6 +358,7 @@ app.get('/api/system-diag', authMiddleware, adminOnly, async (req, res) => {
         res.json({
             status: 'online',
             db_dialect: sequelize.getDialect(),
+            db_dialect_env: process.env.DB_DIALECT || 'not set',
             db_host: process.env.DB_HOST || 'localhost',
             db_name: process.env.DB_NAME || 'not set',
             db_storage_env: process.env.DB_STORAGE || 'not set',
