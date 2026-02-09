@@ -9,7 +9,18 @@ const User = sequelize.define('User', {
     role: { type: DataTypes.STRING, defaultValue: 'coworker' },
     roles: {
         type: DataTypes.JSON,
-        defaultValue: []
+        defaultValue: [],
+        get() {
+            const rawValue = this.getDataValue('roles');
+            if (typeof rawValue === 'string') {
+                try {
+                    return JSON.parse(rawValue);
+                } catch (e) {
+                    return [rawValue];
+                }
+            }
+            return rawValue || [];
+        }
     },
     status: { type: DataTypes.STRING, defaultValue: 'in_attesa' }, // in_attesa, approvato, sospeso
     saldo_neu: { type: DataTypes.FLOAT, defaultValue: 0 },
@@ -100,7 +111,14 @@ module.exports = {
         tariffa_oraria: { type: DataTypes.FLOAT },
         descrizione: { type: DataTypes.TEXT },
         colore: { type: DataTypes.STRING },
-        tipi_utilizzo: { type: DataTypes.JSON }, // ['call', 'riunione']
+        tipi_utilizzo: {
+            type: DataTypes.JSON,
+            get() {
+                const val = this.getDataValue('tipi_utilizzo');
+                if (typeof val === 'string') { try { return JSON.parse(val); } catch (e) { return [val]; } }
+                return val || [];
+            }
+        }, // ['call', 'riunione']
         solo_staff: { type: DataTypes.BOOLEAN, defaultValue: false },
         attiva: { type: DataTypes.BOOLEAN, defaultValue: true }
     }),
@@ -212,9 +230,30 @@ module.exports = {
         ore_sale_incluse: { type: DataTypes.FLOAT },
         crediti_sala: { type: DataTypes.INTEGER },
         descrizione: { type: DataTypes.TEXT },
-        notifiche_scadenza: { type: DataTypes.JSON }, // [{giorni: number, testo: string}]
-        notifiche_ingressi: { type: DataTypes.JSON }, // [{soglia: number, testo: string}]
-        notifiche_ore: { type: DataTypes.JSON },      // [{soglia: number, testo: string}]
+        notifiche_scadenza: {
+            type: DataTypes.JSON,
+            get() {
+                const val = this.getDataValue('notifiche_scadenza');
+                if (typeof val === 'string') { try { return JSON.parse(val); } catch (e) { return []; } }
+                return val || [];
+            }
+        }, // [{giorni: number, testo: string}]
+        notifiche_ingressi: {
+            type: DataTypes.JSON,
+            get() {
+                const val = this.getDataValue('notifiche_ingressi');
+                if (typeof val === 'string') { try { return JSON.parse(val); } catch (e) { return []; } }
+                return val || [];
+            }
+        }, // [{soglia: number, testo: string}]
+        notifiche_ore: {
+            type: DataTypes.JSON,
+            get() {
+                const val = this.getDataValue('notifiche_ore');
+                if (typeof val === 'string') { try { return JSON.parse(val); } catch (e) { return []; } }
+                return val || [];
+            }
+        },      // [{soglia: number, testo: string}]
         attivo: { type: DataTypes.BOOLEAN, defaultValue: true }
     }),
 
@@ -233,7 +272,14 @@ module.exports = {
         ore_sale_usate: { type: DataTypes.FLOAT, defaultValue: 0 },
         stato: { type: DataTypes.STRING, defaultValue: 'attivo' }, // 'attivo', 'scaduto', 'annullato'
         riferimento_ordine_id: { type: DataTypes.INTEGER, allowNull: true },
-        notifiche_inviate: { type: DataTypes.JSON }, // { scadenza: [7, 3], ingressi: [2], ore: [1] }
+        notifiche_inviate: {
+            type: DataTypes.JSON,
+            get() {
+                const val = this.getDataValue('notifiche_inviate');
+                if (typeof val === 'string') { try { return JSON.parse(val); } catch (e) { return {}; } }
+                return val || {};
+            }
+        }, // { scadenza: [7, 3], ingressi: [2], ore: [1] }
         attivo: { type: DataTypes.BOOLEAN, defaultValue: true }
     }),
 
@@ -318,8 +364,22 @@ module.exports = {
         azione: { type: DataTypes.STRING }, // 'create', 'update', 'delete', 'login', etc.
         modello: { type: DataTypes.STRING },
         riferimento_id: { type: DataTypes.INTEGER },
-        dati_precedenti: { type: DataTypes.JSON },
-        dati_nuovi: { type: DataTypes.JSON },
+        dati_precedenti: {
+            type: DataTypes.JSON,
+            get() {
+                const val = this.getDataValue('dati_precedenti');
+                if (typeof val === 'string') { try { return JSON.parse(val); } catch (e) { return {}; } }
+                return val || {};
+            }
+        },
+        dati_nuovi: {
+            type: DataTypes.JSON,
+            get() {
+                const val = this.getDataValue('dati_nuovi');
+                if (typeof val === 'string') { try { return JSON.parse(val); } catch (e) { return {}; } }
+                return val || {};
+            }
+        },
         ip_address: { type: DataTypes.STRING },
         data_esecuzione: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
     })
