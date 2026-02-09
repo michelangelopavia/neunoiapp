@@ -34,7 +34,30 @@ import ForgotPassword from "./ForgotPassword";
 import ResetPassword from "./ResetPassword";
 import VerifyEmail from "./VerifyEmail";
 
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+
+function ProtectedRoute({ children }) {
+    const { user, isLoading } = useAuth();
+    const location = useLocation();
+
+    if (isLoading) {
+        return <div className="flex items-center justify-center min-h-screen">Caricamento...</div>;
+    }
+
+    if (!user) {
+        return <Navigate to="/Login" state={{ from: location }} replace />;
+    }
+
+    return children;
+}
+
+function PublicOnlyRoute({ children }) {
+    const { user, isLoading } = useAuth();
+    if (isLoading) return <div className="flex items-center justify-center min-h-screen">Caricamento...</div>;
+    if (user) return <Navigate to="/Home" replace />;
+    return children;
+}
 
 const PAGES = {
 
@@ -97,41 +120,41 @@ function PagesContent() {
             <Routes>
 
                 <Route path="/" element={<Home />} />
-
-
-                <Route path="/Amministrazione" element={<Amministrazione />} />
-
-                <Route path="/CheckIn" element={<CheckIn />} />
-
-                <Route path="/Coworking" element={<Coworking />} />
-
-                <Route path="/GestioneCoworking" element={<GestioneCoworking />} />
-
                 <Route path="/Home" element={<Home />} />
 
-                <Route path="/Host" element={<Host />} />
-
-                <Route path="/ImportaDati" element={<ImportaDati />} />
-
-                <Route path="/MieiNEU" element={<MieiNEU />} />
-
-                <Route path="/MieiTask" element={<MieiTask />} />
-
-                <Route path="/Profilo" element={<Profilo />} />
-
-                <Route path="/Riepiloghi" element={<Riepiloghi />} />
-                <Route path="/RiepilogoSoci" element={<RiepilogoSoci />} />
-
-                <Route path="/TurniHost" element={<TurniHost />} />
-
-                <Route path="/Volontariato" element={<Volontariato />} />
-
+                {/* Public Pages */}
+                <Route path="/CheckIn" element={<CheckIn />} />
                 <Route path="/Welcome" element={<Welcome />} />
-                <Route path="/Login" element={<Login />} />
-                <Route path="/Register" element={<Register />} />
-                <Route path="/ForgotPassword" element={<ForgotPassword />} />
-                <Route path="/ResetPassword" element={<ResetPassword />} />
-                <Route path="/VerifyEmail" element={<VerifyEmail />} />
+
+                <Route path="/Login" element={
+                    <PublicOnlyRoute><Login /></PublicOnlyRoute>
+                } />
+                <Route path="/Register" element={
+                    <PublicOnlyRoute><Register /></PublicOnlyRoute>
+                } />
+                <Route path="/ForgotPassword" element={
+                    <PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>
+                } />
+                <Route path="/ResetPassword" element={
+                    <PublicOnlyRoute><ResetPassword /></PublicOnlyRoute>
+                } />
+                <Route path="/VerifyEmail" element={
+                    <PublicOnlyRoute><VerifyEmail /></PublicOnlyRoute>
+                } />
+
+                {/* Protected Pages */}
+                <Route path="/Amministrazione" element={<ProtectedRoute><Amministrazione /></ProtectedRoute>} />
+                <Route path="/Coworking" element={<ProtectedRoute><Coworking /></ProtectedRoute>} />
+                <Route path="/GestioneCoworking" element={<ProtectedRoute><GestioneCoworking /></ProtectedRoute>} />
+                <Route path="/Host" element={<ProtectedRoute><Host /></ProtectedRoute>} />
+                <Route path="/ImportaDati" element={<ProtectedRoute><ImportaDati /></ProtectedRoute>} />
+                <Route path="/MieiNEU" element={<ProtectedRoute><MieiNEU /></ProtectedRoute>} />
+                <Route path="/MieiTask" element={<ProtectedRoute><MieiTask /></ProtectedRoute>} />
+                <Route path="/Profilo" element={<ProtectedRoute><Profilo /></ProtectedRoute>} />
+                <Route path="/Riepiloghi" element={<ProtectedRoute><Riepiloghi /></ProtectedRoute>} />
+                <Route path="/RiepilogoSoci" element={<ProtectedRoute><RiepilogoSoci /></ProtectedRoute>} />
+                <Route path="/TurniHost" element={<ProtectedRoute><TurniHost /></ProtectedRoute>} />
+                <Route path="/Volontariato" element={<ProtectedRoute><Volontariato /></ProtectedRoute>} />
 
             </Routes>
         </Layout>

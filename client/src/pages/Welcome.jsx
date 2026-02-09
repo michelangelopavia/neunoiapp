@@ -34,14 +34,14 @@ export default function Welcome() {
       <div className="relative">
         {/* Header */}
         <div className="absolute top-0 right-0 p-6 flex gap-4 z-10">
-          <Button 
+          <Button
             onClick={() => neunoi.auth.redirectToLogin(createPageUrl('Home'))}
             className="bg-white text-[#053c5e] hover:bg-[#bfdbf7] font-semibold"
           >
             <LogIn className="w-4 h-4 mr-2" />
             Accedi
           </Button>
-          <Button 
+          <Button
             onClick={() => neunoi.auth.redirectToLogin(createPageUrl('Home'))}
             className="bg-[#db222a] hover:bg-[#1f7a8c] text-white font-semibold"
           >
@@ -55,9 +55,9 @@ export default function Welcome() {
           <div className="max-w-4xl mx-auto">
             {/* Logo */}
             <div className="mb-8">
-              <img 
-                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/neunoi-prod/public/6948101ec07ecbe73edb9edc/c79cf77cd_neunoi_logo_bianco.png" 
-                alt="neu [nòi]" 
+              <img
+                src="/logo-white.png"
+                alt="neu [nòi]"
                 className="h-24 mx-auto"
               />
             </div>
@@ -69,27 +69,27 @@ export default function Welcome() {
               Spazio al lavoro - Coworking e comunità a Palermo
             </p>
             <p className="text-lg text-white/80 max-w-2xl mx-auto mb-12">
-              Un'associazione di promozione sociale che unisce coworking, condivisione e collaborazione. 
-              Partecipa alla nostra comunità basata sul sistema NEU, la moneta complementare per valorizzare 
+              Un'associazione di promozione sociale che unisce coworking, condivisione e collaborazione.
+              Partecipa alla nostra comunità basata sul sistema NEU, la moneta complementare per valorizzare
               il contributo di ogni socio.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
+              <Button
                 onClick={() => window.location.href = createPageUrl('CheckIn')}
                 className="bg-[#1f7a8c] hover:bg-[#053c5e] text-white text-lg px-8 py-6 font-bold"
               >
                 <ClipboardCheck className="w-5 h-5 mr-2" />
                 Check-in Coworking
               </Button>
-              <Button 
+              <Button
                 onClick={() => neunoi.auth.redirectToLogin(createPageUrl('Home'))}
                 className="bg-[#db222a] hover:bg-white hover:text-[#053c5e] text-white text-lg px-8 py-6 font-bold"
               >
                 <UserPlus className="w-5 h-5 mr-2" />
                 Diventa Socio
               </Button>
-              <Button 
+              <Button
                 onClick={() => neunoi.auth.redirectToLogin(createPageUrl('Home'))}
                 className="bg-white text-[#053c5e] hover:bg-[#bfdbf7] text-lg px-8 py-6 font-bold"
               >
@@ -107,7 +107,7 @@ export default function Welcome() {
           <h2 className="text-4xl font-bold text-[#053c5e] text-center mb-12">
             Cosa offriamo
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <div className="bg-[#bfdbf7] p-8 text-center">
               <div className="w-16 h-16 bg-[#053c5e] rounded-full flex items-center justify-center mx-auto mb-4">
@@ -115,7 +115,7 @@ export default function Welcome() {
               </div>
               <h3 className="text-2xl font-bold text-[#053c5e] mb-4">Sistema NEU</h3>
               <p className="text-[#053c5e]">
-                Una moneta complementare che valorizza il tuo contributo all'associazione. 
+                Una moneta complementare che valorizza il tuo contributo all'associazione.
                 Guadagna NEU con turni host e compiti, usali per servizi coworking.
               </p>
             </div>
@@ -126,7 +126,7 @@ export default function Welcome() {
               </div>
               <h3 className="text-2xl font-bold mb-4">Comunità</h3>
               <p>
-                Entra a far parte di una comunità di professionisti, freelancer e creativi. 
+                Entra a far parte di una comunità di professionisti, freelancer e creativi.
                 Condividi conoscenze, collabora su progetti e cresci insieme a noi.
               </p>
             </div>
@@ -137,7 +137,7 @@ export default function Welcome() {
               </div>
               <h3 className="text-2xl font-bold mb-4">Spazi Flessibili</h3>
               <p>
-                Postazioni coworking, sale riunioni e spazi eventi. 
+                Postazioni coworking, sale riunioni e spazi eventi.
                 Lavora quando e come vuoi, in un ambiente stimolante e professionale.
               </p>
             </div>
@@ -164,9 +164,9 @@ export default function Welcome() {
       {/* Footer */}
       <div className="bg-[#053c5e] text-white py-8">
         <div className="container mx-auto px-4 text-center">
-          <img 
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/neunoi-prod/public/6948101ec07ecbe73edb9edc/c79cf77cd_neunoi_logo_bianco.png" 
-            alt="neu [nòi]" 
+          <img
+            src="/logo-white.png"
+            alt="neu [nòi]"
             className="h-12 mx-auto mb-4"
           />
           <p className="text-white/80">
