@@ -30,17 +30,23 @@ const getModel = (req, res, next) => {
 
 // Helper to normalize roles (MySQL stores JSON as string, SQLite as object)
 const normalizeRoles = (user) => {
-    let roles = user?.roles || [user?.role];
+    if (!user) return [];
+    let roles = user.roles;
+
+    // Se roles è una stringa (JSON in MySQL), proviamo a parsarla
     if (typeof roles === 'string') {
         try {
             roles = JSON.parse(roles);
-        } catch {
+        } catch (e) {
             roles = [roles];
         }
     }
-    if (!Array.isArray(roles)) {
-        roles = [roles];
+
+    // Se non è un array o è vuoto, proviamo a usare il campo 'role' singolo
+    if (!Array.isArray(roles) || roles.length === 0) {
+        roles = [user.role].filter(Boolean);
     }
+
     return roles;
 };
 
@@ -314,10 +320,10 @@ router.get('/:modelName/:id', getModel, checkPermissions, async (req, res) => {
         const roles = normalizeRoles(req.user);
         const isAdminOrHost = roles.some(r => ['admin', 'super_admin', 'host'].includes(r));
         const { modelName } = req.params;
-        const isOwner = (modelName === 'User' && item.id === req.user.id) ||
-            (item.user_id && item.user_id === req.user.id) ||
-            (item.utente_id && item.utente_id === req.user.id) ||
-            (modelName === 'TransazioneNEU' && (item.da_utente_id === req.user.id || item.a_utente_id === req.user.id));
+        const isOwner = (modelName === 'User' && item.id == req.user.id) ||
+            (item.user_id && item.user_id == req.user.id) ||
+            (item.utente_id && item.utente_id == req.user.id) ||
+            (modelName === 'TransazioneNEU' && (item.da_utente_id == req.user.id || item.a_utente_id == req.user.id));
 
         if (!isAdminOrHost && !isOwner) {
             return res.status(403).json({ error: 'Accesso negato a risorsa di un altro utente.' });
@@ -532,9 +538,9 @@ router.patch('/:modelName/:id', getModel, checkPermissions, async (req, res) => 
         const roles = normalizeRoles(req.user);
         const isAdminOrHost = roles.some(r => ['admin', 'super_admin', 'host'].includes(r));
 
-        const isOwner = (modelName === 'User' && item.id === req.user.id) ||
-            (item.user_id && item.user_id === req.user.id) ||
-            (item.utente_id && item.utente_id === req.user.id);
+        const isOwner = (modelName === 'User' && item.id == req.user.id) ||
+            (item.user_id && item.user_id == req.user.id) ||
+            (item.utente_id && item.utente_id == req.user.id);
 
         if (!isAdminOrHost && !isOwner) {
             return res.status(403).json({ error: 'Accesso negato: non puoi modificare risorse di altri utenti.' });

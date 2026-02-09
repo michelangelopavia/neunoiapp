@@ -223,15 +223,26 @@ app.get('/api/backup-database-neunoi', authMiddleware, adminOnly, async (req, re
             res.write(`-- NEU NOI MySQL Backup\n-- Generated: ${new Date().toISOString()}\n\n`);
             res.write('SET FOREIGN_KEY_CHECKS = 0;\n\n');
 
-            // Order matters for foreign keys if we were importing strictly, but we disable checks above
-            const modelNames = Object.keys(models).filter(key => key !== 'sequelize' && key !== 'Sequelize');
+            // Explicit list of models for MySQL Dump
+            const modelNames = [
+                'User', 'ProfiloSocio', 'ProfiloCoworker', 'DatiFatturazione',
+                'TipoAbbonamento', 'AbbonamentoUtente', 'SalaRiunioni', 'PrenotazioneSala',
+                'IngressoCoworking', 'OrdineCoworking', 'AmbitoVolontariato',
+                'AzioneVolontariato', 'DichiarazioneVolontariato', 'TurnoHost',
+                'TransazioneNEU', 'NotificaAbbonamento', 'TaskNotifica',
+                'SistemaSetting', 'AuditLog'
+            ];
 
             for (const name of modelNames) {
                 const Model = models[name];
-                if (!Model) continue;
+                if (!Model) {
+                    console.log(`[BACKUP] Skipping missing model: ${name}`);
+                    continue;
+                }
 
                 const tableName = Model.tableName;
-                const data = await Model.findAll({ raw: true }); // optimize: use streams if huge, but findAll ok for now
+                console.log(`[BACKUP] Dumping ${tableName}...`);
+                const data = await Model.findAll({ raw: true });
 
                 res.write(`-- Table: ${tableName} --\n`);
                 res.write(`TRUNCATE TABLE \`${tableName}\`;\n`);
@@ -244,7 +255,13 @@ app.get('/api/backup-database-neunoi', authMiddleware, adminOnly, async (req, re
                             if (typeof v === 'string') return "'" + v.replace(/\\/g, "\\\\").replace(/'/g, "''").replace(/\n/g, "\\n").replace(/\r/g, "\\r") + "'";
                             if (typeof v === 'boolean') return v ? 1 : 0;
                             if (v instanceof Date) return "'" + v.toISOString().slice(0, 19).replace('T', ' ') + "'";
-                            if (typeof v === 'object') return "'" + JSON.stringify(v).replace(/'/g, "''") + "'";
+                            if (typeof v === 'object') {
+                                try {
+                                    return "'" + JSON.stringify(v).replace(/\\/g, "\\\\").replace(/'/g, "''") + "'";
+                                } catch (e) {
+                                    return 'NULL';
+                                }
+                            }
                             return v;
                         }).join(', ');
                         res.write(`INSERT INTO \`${tableName}\` (${columns}) VALUES (${values});\n`);
@@ -255,6 +272,7 @@ app.get('/api/backup-database-neunoi', authMiddleware, adminOnly, async (req, re
 
             res.write('SET FOREIGN_KEY_CHECKS = 1;\n');
             res.end();
+            console.log('[BACKUP] Completed successfully');
         } catch (error) {
             console.error('[BACKUP-ERROR]', error);
             if (!res.headersSent) res.status(500).send('Errore generazione backup MySQL');
