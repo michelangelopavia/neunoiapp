@@ -62,7 +62,22 @@ app.use(limiter);
 // Auth Middleware and Admin Check for index.js routes
 const authMiddleware = require('./middleware/auth');
 const adminOnly = (req, res, next) => {
-    const roles = req.user?.roles || [req.user?.role];
+    let roles = req.user?.roles;
+
+    // Se roles è una stringa (succede a volte con MySQL/JSON), la parsiamao
+    if (typeof roles === 'string') {
+        try {
+            roles = JSON.parse(roles);
+        } catch (e) {
+            roles = [roles];
+        }
+    }
+
+    // Se non c'è l'array roles, usiamo il campo role singolo
+    if (!Array.isArray(roles)) {
+        roles = [req.user?.role].filter(Boolean);
+    }
+
     if (roles.some(r => ['admin', 'super_admin'].includes(r))) {
         return next();
     }
