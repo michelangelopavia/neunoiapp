@@ -428,7 +428,8 @@ export default function Coworking() {
 
           <CalendarioGriglia
             sale={sale.filter(s => {
-              const isAdmin = user.roles?.some(r => ['host', 'admin', 'super_admin'].includes(r));
+              const userRoles = Array.isArray(user?.roles) ? user.roles : [];
+              const isAdmin = userRoles.some(r => ['host', 'admin', 'super_admin'].includes(r));
               if (s.nome?.toLowerCase().includes('eventi') || s.solo_staff) {
                 return isAdmin;
               }
@@ -436,8 +437,9 @@ export default function Coworking() {
             })}
             prenotazioni={tuttePrenotazioni.filter(p => {
               const s = sale.find(s => s.id === p.sala_id);
+              const userRoles = Array.isArray(user?.roles) ? user.roles : [];
               if (s && (s.nome?.toLowerCase().includes('eventi') || s.solo_staff)) {
-                return user.roles?.some(r => ['host', 'admin', 'super_admin'].includes(r));
+                return userRoles.some(r => ['host', 'admin', 'super_admin'].includes(r));
               }
               return true;
             })} />
