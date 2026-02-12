@@ -51,28 +51,60 @@ export default function Coworking() {
     enabled: showHostCalendar // Only fetch when dialog is opened
   });
 
-  // Fetch Profilo for Receipt
+  // Fetch Profilo for Receipt and subscriptions
   const { data: profilo } = useQuery({
-    queryKey: ['profilo_coworker_receipt', user?.id],
+    queryKey: ['profilo_coworker_receipt', user?.id, user?.email],
     queryFn: async () => {
       if (!user) return null;
-      const profili = await neunoi.entities.ProfiloCoworker.filter({ user_id: user.id });
+
+      // Search by email first (more reliable than user_id filter)
+      let profili = [];
+
+      if (user.email) {
+        profili = await neunoi.entities.ProfiloCoworker.filter({ email: user.email });
+        // Filter to ensure it's linked to this user or has matching email
+        profili = profili.filter(p => p.user_id === user.id || p.email?.toLowerCase() === user.email?.toLowerCase());
+      }
+
+      // Fallback: try user_id if email search failed
+      if (profili.length === 0) {
+        profili = await neunoi.entities.ProfiloCoworker.filter({ user_id: user.id });
+        profili = profili.filter(p => p.user_id === user.id);
+      }
+
       return profili[0] || null;
     },
-    enabled: !!user
+    enabled: !!user,
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0  // Don't cache
   });
 
   const loading = authLoading;
 
   const { data: abbonamenti = [] } = useQuery({
-    queryKey: ['abbonamenti', 'miei'],
+    queryKey: ['abbonamenti', 'miei', profilo?.id],
     queryFn: async () => {
-      const allAbbonamenti = await neunoi.entities.AbbonamentoUtente.filter({
-        user_id: user?.id,
-        stato: 'attivo'
-      });
       const oggi = new Date();
       oggi.setHours(0, 0, 0, 0);
+
+      // Fetch subscriptions by user_id
+      const abbonamentiByUser = user?.id ? await neunoi.entities.AbbonamentoUtente.filter({
+        user_id: user.id,
+        stato: 'attivo'
+      }) : [];
+
+      // Fetch subscriptions by profilo_coworker_id
+      const abbonamentiByProfilo = profilo?.id ? await neunoi.entities.AbbonamentoUtente.filter({
+        profilo_coworker_id: profilo.id,
+        stato: 'attivo'
+      }) : [];
+
+      // Merge and deduplicate by ID
+      const allAbbonamentiMap = new Map();
+      [...abbonamentiByUser, ...abbonamentiByProfilo].forEach(abb => {
+        allAbbonamentiMap.set(abb.id, abb);
+      });
+      const allAbbonamenti = Array.from(allAbbonamentiMap.values());
 
       // Filter out expired ones AND exhausted carnets
       return allAbbonamenti.filter(a => {
@@ -98,10 +130,18 @@ export default function Coworking() {
   });
 
   const { data: prenotazioni = [] } = useQuery({
-    queryKey: ['prenotazioni', 'mie'],
-    queryFn: () => neunoi.entities.PrenotazioneSala.filter({
-      user_id: user?.id
-    }, '-id'),
+    queryKey: ['prenotazioni', 'mie', profilo?.id],
+    queryFn: async () => {
+      // Fetch by user_id
+      const pByUser = user?.id ? await neunoi.entities.PrenotazioneSala.filter({ user_id: user.id }, '-id') : [];
+      // Fetch by profilo_id
+      const pByProf = profilo?.id ? await neunoi.entities.PrenotazioneSala.filter({ profilo_coworker_id: profilo.id }, '-id') : [];
+
+      // Merge and deduplicate
+      const map = new Map();
+      [...pByUser, ...pByProf].forEach(p => map.set(p.id, p));
+      return Array.from(map.values()).sort((a, b) => b.id - a.id);
+    },
     enabled: !!user,
     initialData: []
   });
@@ -121,13 +161,17 @@ export default function Coworking() {
 
   // Fetch Ingressi for history and details
   const { data: ingressi = [] } = useQuery({
-    queryKey: ['ingressi', 'miei'],
-    queryFn: () => {
-      const conditions = [{ user_id: user.id }];
-      if (profilo?.id) conditions.push({ profilo_coworker_id: profilo.id });
-      return neunoi.entities.IngressoCoworking.filter({
-        _or: conditions
-      }, '-id');
+    queryKey: ['ingressi', 'miei', profilo?.id],
+    queryFn: async () => {
+      // Fetch by user_id
+      const iByUser = user?.id ? await neunoi.entities.IngressoCoworking.filter({ user_id: user.id }, '-id') : [];
+      // Fetch by profilo_id
+      const iByProf = profilo?.id ? await neunoi.entities.IngressoCoworking.filter({ profilo_coworker_id: profilo.id }, '-id') : [];
+
+      // Merge and deduplicate
+      const map = new Map();
+      [...iByUser, ...iByProf].forEach(i => map.set(i.id, i));
+      return Array.from(map.values()).sort((a, b) => b.id - a.id);
     },
     enabled: !!user,
     initialData: []
@@ -135,10 +179,18 @@ export default function Coworking() {
 
   // Fetch Ordini for history
   const { data: ordini = [] } = useQuery({
-    queryKey: ['ordini', 'miei'],
-    queryFn: () => neunoi.entities.OrdineCoworking.filter({
-      user_id: user?.id
-    }, '-id'),
+    queryKey: ['ordini', 'miei', profilo?.id],
+    queryFn: async () => {
+      // Fetch by user_id
+      const oByUser = user?.id ? await neunoi.entities.OrdineCoworking.filter({ user_id: user.id }, '-id') : [];
+      // Fetch by profilo_id
+      const oByProf = profilo?.id ? await neunoi.entities.OrdineCoworking.filter({ profilo_coworker_id: profilo.id }, '-id') : [];
+
+      // Merge and deduplicate
+      const map = new Map();
+      [...oByUser, ...oByProf].forEach(o => map.set(o.id, o));
+      return Array.from(map.values()).sort((a, b) => b.id - a.id);
+    },
     enabled: !!user,
     initialData: []
   });

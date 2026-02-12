@@ -85,8 +85,21 @@ const checkPermissions = (req, res, next) => {
 
                 // 1b. FILTER: Iniettiamo il vincolo di proprietà
                 if (req.path.endsWith('/filter')) {
+                    const coworkingModels = ['AbbonamentoUtente', 'OrdineCoworking', 'PrenotazioneSala', 'IngressoCoworking'];
+
                     if (modelName === 'TransazioneNEU') {
                         req.body[Op.or] = [{ da_utente_id: user.id }, { a_utente_id: user.id }];
+                    } else if (coworkingModels.includes(modelName)) {
+                        // SICUREZZA: Se viene fornito un user_id, forziamo il proprio per evitare leak.
+                        // Se viene fornito profilo_coworker_id, lo verificheremo nel controller (sotto).
+                        if (req.body.user_id) {
+                            req.body.user_id = user.id;
+                        }
+
+                        // Se non specifica nulla, forziamo user_id per default (retrocompatibilità)
+                        if (!req.body.profilo_coworker_id && !req.body.user_id) {
+                            req.body.user_id = user.id;
+                        }
                     } else {
                         const filterKey = (modelName === 'User') ? 'id' : 'user_id';
                         req.body[filterKey] = user.id;
@@ -209,6 +222,68 @@ router.post('/ProfiloCoworker', (req, res, next) => {
     }
 });
 
+// ADMIN ENDPOINT: Link User with ProfiloCoworker by email
+router.post('/link-user-profile', authMiddleware, async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required' });
+        }
+
+        // Find user with this email
+        const user = await models.User.findOne({
+            where: sequelize.where(sequelize.fn('LOWER', sequelize.col('email')), email.toLowerCase())
+        });
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found with this email' });
+        }
+
+        // Find ProfiloCoworker with this email
+        const profilo = await models.ProfiloCoworker.findOne({
+            where: sequelize.where(sequelize.fn('LOWER', sequelize.col('email')), email.toLowerCase())
+        });
+
+        if (!profilo) {
+            return res.status(404).json({ error: 'ProfiloCoworker not found with this email' });
+        }
+
+        // Check if already linked
+        if (profilo.user_id === user.id) {
+            return res.json({
+                success: true,
+                message: 'Already linked',
+                user_id: user.id,
+                profilo_id: profilo.id
+            });
+        }
+
+        // Link them
+        await profilo.update({ user_id: user.id });
+
+        await logAudit({
+            req,
+            azione: 'link',
+            modello: 'ProfiloCoworker',
+            riferimento_id: profilo.id,
+            dati_nuovi: { user_id: user.id, email }
+        });
+
+        res.json({
+            success: true,
+            message: 'Successfully linked',
+            user_id: user.id,
+            profilo_id: profilo.id,
+            profilo_name: `${profilo.first_name} ${profilo.last_name}`
+        });
+
+    } catch (error) {
+        console.error('[LINK-USER-PROFILE-ERROR]', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Tutte le altre rotte richiedono autenticazione
 router.use(authMiddleware);
 
@@ -297,6 +372,34 @@ router.post('/:modelName/filter', getModel, checkPermissions, async (req, res) =
         const sequelize = require('../database');
         if (include === 'all' && sequelize.getDialect() !== 'mysql') {
             options.include = { all: true };
+        }
+
+        // Special ownership verification for Coworking models by profilo_coworker_id
+        const { modelName } = req.params;
+        const coworkingModels = ['AbbonamentoUtente', 'OrdineCoworking', 'PrenotazioneSala', 'IngressoCoworking'];
+
+        if (coworkingModels.includes(modelName)) {
+            const roles = normalizeRoles(req.user);
+            const isAdminOrHost = roles.some(r => ['admin', 'super_admin', 'host'].includes(r));
+
+            if (!isAdminOrHost) {
+                // 1. Verifica forzata user_id se presente (anche se già fatto nel middleware, per ridondanza di sicurezza)
+                if (req.body.user_id && req.body.user_id != req.user.id) {
+                    return res.status(403).json({ error: 'Accesso negato: non puoi accedere a dati di altri utenti (user_id mismatch).' });
+                }
+
+                // 2. Verifica proprietà profilo_coworker_id se presente
+                if (req.body.profilo_coworker_id) {
+                    const profilo = await models.ProfiloCoworker.findByPk(req.body.profilo_coworker_id);
+                    // Consentiamo l'accesso se il profilo è collegato all'utente OR se l'email coincide (per facilitare l'auto-sync)
+                    const isLinked = profilo && profilo.user_id === req.user.id;
+                    const emailMatches = profilo && profilo.email?.toLowerCase() === req.user.email?.toLowerCase();
+
+                    if (!profilo || (!isLinked && !emailMatches)) {
+                        return res.status(403).json({ error: 'Accesso negato: non possiedi questo profilo coworker.' });
+                    }
+                }
+            }
         }
 
         const items = await req.Model.findAll(options);

@@ -17,20 +17,15 @@ export default function Layout({ children, currentPageName }) {
 
   useEffect(() => {
     const syncProfile = async () => {
-      if (user) {
+      if (user && user.email) {
         try {
-          const profiliEsistenti = await neunoi.entities.ProfiloCoworker.filter({
-            email: user.email,
-            user_id: null
-          });
-          if (profiliEsistenti.length > 0) {
-            await neunoi.entities.ProfiloCoworker.update(profiliEsistenti[0].id, {
-              user_id: user.id,
-              stato: 'iscritto'
-            });
-          }
+          // Usa l'API dedicata che gestisce i permessi lato server
+          await neunoi.admin.linkUserProfile(user.email);
         } catch (error) {
-          console.error('Errore sincronizzazione profilo:', error);
+          // In caso di errore o profilo già collegato, logghiamo solo se non è un errore previsto
+          if (!error.message?.includes('già collegato')) {
+            console.error('Errore sincronizzazione profilo:', error);
+          }
         }
       }
     };

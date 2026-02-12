@@ -33,15 +33,40 @@ export default function ProfiloCoworker({ user }) {
   }, [user]);
 
   const loadDatiFatturazione = async () => {
-    if (!user) return;
-    const dati = await neunoi.entities.DatiFatturazione.filter({ user_id: user.id });
-    if (dati[0]) {
-      setDatiFatturazione(dati[0]);
-      setFormData({
-        ...dati[0],
-        paese: dati[0].paese || 'Italia',
-        is_estero: !!dati[0].is_estero
-      });
+    if (!user || !user.id) return;
+
+    try {
+      const dati = await neunoi.entities.DatiFatturazione.filter({ user_id: user.id });
+
+      // CRITICAL: Only use data if it actually belongs to this user
+      if (dati[0] && dati[0].user_id === user.id) {
+        setDatiFatturazione(dati[0]);
+        setFormData({
+          ...dati[0],
+          paese: dati[0].paese || 'Italia',
+          is_estero: !!dati[0].is_estero
+        });
+      } else {
+        // No billing data found for this user - keep form empty
+        setDatiFatturazione(null);
+        setFormData({
+          ragione_sociale: '',
+          indirizzo: '',
+          citta: '',
+          provincia: '',
+          cap: '',
+          paese: 'Italia',
+          codice_fiscale: '',
+          partita_iva: '',
+          pec: '',
+          codice_univoco: '',
+          is_estero: false
+        });
+      }
+    } catch (error) {
+      console.error('Error loading billing data:', error);
+      // On error, reset to empty form
+      setDatiFatturazione(null);
     }
   };
 

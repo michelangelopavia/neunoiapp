@@ -189,6 +189,14 @@ export const neunoi = {
             a.click();
             a.remove();
             return true;
+        },
+        linkUserProfile: async (email) => {
+            const res = await fetch(`${API_URL}/api/entities/link-user-profile`, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({ email })
+            });
+            return handleResponse(res);
         }
     },
     auth: {
