@@ -5,3 +5,5 @@ deployment:
     - /bin/cp -R server/* $DEPLOYPATH
     - /bin/cp server/.env $DEPLOYPATH
     - /bin/cp server/package.json $DEPLOYPATH
+    - /bin/cp server/public/.htaccess $DEPLOYPATH
+    - /bin/cp server/.htaccess $DEPLOYPATH || true
