@@ -548,6 +548,22 @@ router.patch('/:modelName/:id', getModel, checkPermissions, async (req, res) => 
 
         const oldData = { ...item.toJSON() };
 
+        // Special handling for User email updates - sync with ProfiloCoworker
+        if (modelName === 'User' && req.body.email && req.body.email !== oldData.email) {
+            const newEmail = req.body.email.trim().toLowerCase();
+
+            // Find ProfiloCoworker with matching email
+            const profiloCoworker = await models.ProfiloCoworker.findOne({
+                where: sequelize.where(sequelize.fn('LOWER', sequelize.col('email')), newEmail)
+            });
+
+            if (profiloCoworker) {
+                // Link the ProfiloCoworker to this User
+                await profiloCoworker.update({ user_id: item.id });
+                console.log(`[USER-EMAIL-SYNC] Linked ProfiloCoworker ${profiloCoworker.id} to User ${item.id}`);
+            }
+        }
+
         if (modelName === 'DichiarazioneVolontariato') {
             const userId = req.body.user_id || item.user_id;
             await item.update(req.body);
@@ -582,6 +598,22 @@ router.patch('/:modelName/:id', getModel, checkPermissions, async (req, res) => 
                 dati_nuovi: reloaded
             });
             return res.json(reloaded);
+        }
+
+        // Special handling for ProfiloCoworker email updates - sync with User
+        if (modelName === 'ProfiloCoworker' && req.body.email && req.body.email !== oldData.email) {
+            const newEmail = req.body.email.trim().toLowerCase();
+
+            // Find User with matching email
+            const user = await models.User.findOne({
+                where: sequelize.where(sequelize.fn('LOWER', sequelize.col('email')), newEmail)
+            });
+
+            if (user) {
+                // Link this ProfiloCoworker to the User
+                req.body.user_id = user.id;
+                console.log(`[PROFILO-EMAIL-SYNC] Linking ProfiloCoworker ${id} to User ${user.id}`);
+            }
         }
 
         await item.update(req.body);
