@@ -37,6 +37,11 @@ export default function Amministrazione() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingUser, setEditingUser] = useState(null);
+  const [userFormData, setUserFormData] = useState({
+    full_name: '',
+    email: '',
+    roles: []
+  });
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [neuDialogOpen, setNeuDialogOpen] = useState(false);
   const [neuForm, setNeuForm] = useState({
@@ -174,6 +179,11 @@ export default function Amministrazione() {
     setEditingUser(user);
     const currentRoles = Array.isArray(user?.roles) ? user.roles : (user?.role ? [user.role] : []);
     setSelectedRoles(currentRoles);
+    setUserFormData({
+      full_name: user.full_name || '',
+      email: user.email || '',
+      roles: currentRoles
+    });
   };
 
   const handleRoleToggle = (roleValue) => {
@@ -184,15 +194,18 @@ export default function Amministrazione() {
     );
   };
 
-  const handleSaveRoles = async () => {
+  const handleSaveUser = async () => {
     try {
-      await neunoi.entities.User.update(editingUser.id, { roles: selectedRoles });
+      await neunoi.entities.User.update(editingUser.id, {
+        ...userFormData,
+        roles: selectedRoles
+      });
       await loadUsers();
       setEditingUser(null);
-      toast.success('✅ Ruoli aggiornati!');
+      toast.success('✅ Utente aggiornato!');
     } catch (error) {
-      console.error('Errore aggiornamento ruoli:', error);
-      toast.error('Errore aggiornamento ruoli');
+      console.error('Errore aggiornamento utente:', error);
+      toast.error('Errore durante l\'aggiornamento: ' + (error.message || 'Controlla che l\'email non sia già in uso'));
     }
   };
 
@@ -750,17 +763,40 @@ export default function Amministrazione() {
       </AlertDialog>
 
       <Dialog open={!!editingUser} onOpenChange={(o) => !o && setEditingUser(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Ruoli - {editingUser?.full_name}</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-1 gap-2">
-            {availableRoles.map(r => (
-              <div key={r.value} className="flex items-center gap-2">
-                <Checkbox id={r.value} checked={selectedRoles.includes(r.value)} onCheckedChange={() => handleRoleToggle(r.value)} />
-                <Label htmlFor={r.value}>{r.label}</Label>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader><DialogTitle>Modifica Utente - {editingUser?.full_name}</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nome Completo</Label>
+              <Input
+                value={userFormData.full_name}
+                onChange={(e) => setUserFormData({ ...userFormData, full_name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                value={userFormData.email}
+                onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
+                type="email"
+              />
+            </div>
+            <div className="space-y-2 pt-2 border-t">
+              <Label className="text-sm font-bold block mb-2">Permessi e Ruoli</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                {availableRoles.map(r => (
+                  <div key={r.value} className="flex items-center gap-2">
+                    <Checkbox id={r.value} checked={selectedRoles.includes(r.value)} onCheckedChange={() => handleRoleToggle(r.value)} />
+                    <Label htmlFor={r.value} className="text-sm cursor-pointer">{r.label}</Label>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
-          <Button onClick={handleSaveRoles} className="mt-4">Salva</Button>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setEditingUser(null)}>Annulla</Button>
+            <Button onClick={handleSaveUser} className="bg-[#053c5e]">Salva Modifiche</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

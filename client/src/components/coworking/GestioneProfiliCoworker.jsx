@@ -5,14 +5,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Mail, UserPlus, Users, Trash2, Download } from 'lucide-react';
+import { Search, Mail, UserPlus, Users, Trash2, Download, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function GestioneProfiliCoworker() {
   const [searchTerm, setSearchTerm] = useState('');
   const [invitoProfiloId, setInvitoProfiloId] = useState(null);
+  const [editingProfilo, setEditingProfilo] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    telefono: ''
+  });
   const queryClient = useQueryClient();
 
   const { data: profili = [] } = useQuery({
@@ -20,6 +29,54 @@ export default function GestioneProfiliCoworker() {
     queryFn: () => neunoi.entities.ProfiloCoworker.list('-created_date'),
     initialData: []
   });
+
+  const modificaMutation = useMutation({
+    mutationFn: async ({ id, data }) => {
+      await neunoi.entities.ProfiloCoworker.update(id, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profili'] });
+      setEditingProfilo(null);
+      toast.success('Profilo aggiornato con successo');
+    },
+    onError: () => {
+      toast.error('Errore nell\'aggiornamento del profilo');
+    }
+  });
+
+  const openEditDialog = (profilo) => {
+    setEditingProfilo(profilo);
+    setEditFormData({
+      first_name: profilo.first_name || '',
+      last_name: profilo.last_name || '',
+      email: profilo.email || '',
+      telefono: profilo.telefono || ''
+    });
+  };
+
+  const getStatoColor = (stato) => {
+    const colors = {
+      check_in_completato: 'bg-blue-100 text-blue-800',
+      invitato: 'bg-orange-100 text-orange-800',
+      iscritto: 'bg-green-100 text-green-800'
+    };
+    return colors[stato] || 'bg-slate-100 text-slate-800';
+  };
+
+  const getStatoLabel = (stato) => {
+    const labels = {
+      check_in_completato: 'Check-in completato',
+      invitato: 'Invitato',
+      iscritto: 'Iscritto'
+    };
+    return labels[stato] || stato;
+  };
+
+  const profiliFiltrati = profili.filter(p =>
+    (p.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+    (p.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+    (p.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+  );
 
   const invitaMutation = useMutation({
     mutationFn: async (profilo) => {
@@ -56,30 +113,6 @@ via Alloro 64, 90133 Palermo`,
       toast.error('Errore nell\'invio dell\'invito');
     }
   });
-
-  const getStatoColor = (stato) => {
-    const colors = {
-      check_in_completato: 'bg-blue-100 text-blue-800',
-      invitato: 'bg-orange-100 text-orange-800',
-      iscritto: 'bg-green-100 text-green-800'
-    };
-    return colors[stato] || 'bg-slate-100 text-slate-800';
-  };
-
-  const getStatoLabel = (stato) => {
-    const labels = {
-      check_in_completato: 'Check-in completato',
-      invitato: 'Invitato',
-      iscritto: 'Iscritto'
-    };
-    return labels[stato] || stato;
-  };
-
-  const profiliFiltrati = profili.filter(p =>
-    (p.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-    (p.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-    (p.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
-  );
 
   const handleExportCSV = () => {
     if (profili.length === 0) {
@@ -212,6 +245,14 @@ via Alloro 64, 90133 Palermo`,
                       <Button
                         size="sm"
                         variant="ghost"
+                        className="text-[#1f7a8c] hover:bg-slate-100"
+                        onClick={() => openEditDialog(profilo)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         className="text-red-500 hover:text-red-700 hover:bg-red-50"
                         onClick={async () => {
                           if (confirm('Sei sicuro di voler eliminare questo profilo?')) {
@@ -268,6 +309,59 @@ via Alloro 64, 90133 Palermo`,
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!editingProfilo} onOpenChange={(o) => !o && setEditingProfilo(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Modifica Profilo Coworker</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nome</Label>
+                <Input
+                  value={editFormData.first_name}
+                  onChange={(e) => setEditFormData({ ...editFormData, first_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Cognome</Label>
+                <Input
+                  value={editFormData.last_name}
+                  onChange={(e) => setEditFormData({ ...editFormData, last_name: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                value={editFormData.email}
+                onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                type="email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Telefono</Label>
+              <Input
+                value={editFormData.telefono}
+                onChange={(e) => setEditFormData({ ...editFormData, telefono: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setEditingProfilo(null)}>
+              Annulla
+            </Button>
+            <Button
+              className="bg-[#053c5e] hover:bg-[#1f7a8c]"
+              onClick={() => modificaMutation.mutate({ id: editingProfilo.id, data: editFormData })}
+              disabled={modificaMutation.isPending}
+            >
+              Salva Modifiche
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
